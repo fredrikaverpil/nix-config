@@ -69,8 +69,20 @@ build times.
    sh <(curl -L https://nixos.org/nix/install) --daemon
    ```
 
-   Enable flakes: Edit `/etc/nix/nix.conf` and add
-   `experimental-features = nix-command flakes`. Restart `nix-daemon` or reboot.
+   Enable flakes: Edit `/etc/nix/nix.conf` and add the following:
+
+   ```ini
+   experimental-features = nix-command flakes
+
+   extra-substituters = https://nixos-raspberrypi.cachix.org
+   extra-trusted-public-keys = nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
+   ```
+
+   The latter two lines will prevent very long build times, and will instead
+   download builds from a binary cache. Consult the `nvmd/nixos-raspberrypi`
+   repo for potential updates on the hash.
+
+   Restart `nix-daemon` or reboot.
 
 2. Clone the [nvmd/nixos-raspberrypi](https://github.com/nvmd/nixos-raspberrypi)
    flake and build the installer image:
@@ -105,13 +117,14 @@ build times.
    nix build .#installerImages.rpi5
    ```
 
-   This will output a path to the generated image, something like
+   This will generate a symlink `result`, pointing to the generated image,
+   something like
    `/nix/store/...-nixos-sd-image-.../sd-image/nixos-installer-rpi5-kernelboot.img.zst`.
 
 3. Decompress the image:
 
    ```sh
-   zstd -d <path_to_generated_image.img.zst> -o nixos-installer-rpi5.img
+   zstd -d result/sd-image/nixos-installer-rpi5-kernelboot.img.zst -o nixos-installer-rpi5.img
    ```
 
 4. Flash the image to the NVMe SSD.
