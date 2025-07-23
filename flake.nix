@@ -142,6 +142,12 @@
                   wget
                 ];
                 
+                programs.git = {
+                  enable = true;
+				  userName = "Fredrik Averpil";
+				  userEmail = "fredrik.averpil@gmail.com";
+                };
+                
                 home.stateVersion = "25.05";
               };
             };
