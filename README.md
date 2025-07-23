@@ -148,6 +148,7 @@ build times.
 2. Connect to network. If connecting to Wifi:
 
    ```sh
+   iwctl  # start iwctl in interactive mode
    device list # get devices, such as 'wlan0'
    station wlan0 scan # scan for networks
    station wlan0 get-networks # show available networks
