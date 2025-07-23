@@ -82,6 +82,9 @@
             services.openssh.enable = true;
             services.openssh.settings.PermitRootLogin = "yes";
 
+            # Enable Docker
+            virtualisation.docker.enable = true;
+
             # SSH keys for both users
             users.users.root.openssh.authorizedKeys.keys = [
               (builtins.getEnv "SSH_PUBLIC_KEY")
@@ -90,7 +93,7 @@
             # Create a regular user
             users.users.fredrik = {
               isNormalUser = true;
-              extraGroups = [ "wheel" "networkmanager" ];
+              extraGroups = [ "wheel" "networkmanager" "docker" ];
               password = builtins.getEnv "FREDRIK_PASSWORD";
               openssh.authorizedKeys.keys = [
                 (builtins.getEnv "SSH_PUBLIC_KEY")
@@ -111,6 +114,7 @@
               wget
               tmux
               rsync
+              docker-compose
               # Pi-specific tools available through nixos-raspberrypi
             ] ++ (with pkgs.rpi or {}; [
               # Pi-optimized packages when available
