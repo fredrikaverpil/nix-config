@@ -17,15 +17,20 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, nixos-raspberrypi, disko, ... }@inputs: {
+  outputs = { self, nixpkgs, nixos-raspberrypi, disko, home-manager, ... }@inputs: {
     nixosConfigurations = {
       # Your Raspberry Pi 5 homelab system configuration
       rpi5-homelab = nixos-raspberrypi.lib.nixosSystemFull {
         specialArgs = inputs // { nixos-raspberrypi = nixos-raspberrypi; };
         modules = [
           disko.nixosModules.disko
+          home-manager.nixosModules.home-manager
           {
             # Hardware specific configuration
             imports = with nixos-raspberrypi.nixosModules; [
@@ -106,13 +111,8 @@
             # Enhanced package set for homelab use
             environment.systemPackages = with pkgs; [
               vim
-              neovim
               git
               htop
-              tree
-              curl
-              wget
-              tmux
               rsync
               docker-compose
               # Pi-specific tools available through nixos-raspberrypi
@@ -128,6 +128,23 @@
               cfg.bootloader
               config.boot.kernelPackages.kernel.version
             ];
+
+            # Home Manager configuration
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              users.fredrik = { pkgs, ... }: {
+                home.packages = with pkgs; [
+                  neovim
+                  tmux
+                  tree
+                  curl
+                  wget
+                ];
+                
+                home.stateVersion = "24.05";
+              };
+            };
 
             # This is required for nixos-anywhere
             system.stateVersion = "24.05";
