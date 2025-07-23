@@ -11,14 +11,14 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     home-manager = {
-      url = "github:nix-community/home-manager";
+      url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -142,12 +142,12 @@
                   wget
                 ];
                 
-                home.stateVersion = "24.05";
+                home.stateVersion = "25.05";
               };
             };
 
             # This is required for nixos-anywhere
-            system.stateVersion = "24.05";
+            system.stateVersion = "25.05";
           })
         ];
       };
