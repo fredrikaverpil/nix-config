@@ -143,6 +143,8 @@ build times.
 
 #### Initial Boot into NixOS Installer on NVMe SSD
 
+> [!ATTENTION] This part is outdated and not used!
+
 1. Boot Pi 5 from NVMe: Power down your Pi, remove the Raspberry Pi OS SD card,
    and power on. It should boot into the NixOS installer.
 2. Connect to network. If connecting to Wifi:
@@ -169,8 +171,8 @@ build times.
 
 #### Deploy with nixos-anywhere
 
-Once you have the installer running and can SSH to it, you can deploy your
-actual NixOS configuration using nixos-anywhere:
+From the development machine (e.g. macOS), `cd` into this repo. We will now
+deploy the `flake.nix`.
 
 1. **Install nixos-anywhere** on your development machine:
 
@@ -178,13 +180,39 @@ actual NixOS configuration using nixos-anywhere:
    nix profile install nixpkgs#nixos-anywhere
    ```
 
-2. **Create your system configuration** in `flake.nix`. This repo includes a
-   basic RPi5 configuration named `rpi5-homelab`.
+2. **Allow root password on rpi5**:
+
+   Make sure the rpi5 is running the Raspberry OS from SD Card.
+
+   ```sh
+   # SSH into rpi5
+   ssh root@raspberrypi.local
+
+   # Set root password
+   sudo passwd root
+   sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+   sudo systemctl restart ssh
+
+    # Add Nix to system PATH permanently
+    echo 'export PATH="/root/.nix-profile/bin:$PATH"' >> /etc/bash.bashrc
+    echo 'source /root/.nix-profile/etc/profile.d/nix.sh' >> /etc/bash.bashrc
+
+    # Also add to /etc/environment for system-wide access
+    echo 'PATH="/root/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' >> /etc/environment
+
+    # Install nixos-install
+    nix-env -iA nixpkgs.nixos-install-tools
+
+    # Exit shell
+    exit
+   ```
 
 3. **Deploy to the Pi**:
 
+   From the development machine:
+
    ```sh
-   nixos-anywhere --flake .#rpi5-homelab root@nixos-installer.local
+   nixos-anywhere --flake .#rpi5-homelab root@raspberrypi.local
    ```
 
    This will:
@@ -195,8 +223,5 @@ actual NixOS configuration using nixos-anywhere:
 4. **SSH to your new system**:
 
    ```sh
-   ssh fredrik@rpi5-homelab.local
+   ssh fredrik@<ip-to-rpi5-homelab>
    ```
-
-Note: If building on macOS, you may need to configure remote builders or use the
-binary cache to avoid cross-compilation issues.

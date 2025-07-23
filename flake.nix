@@ -35,8 +35,19 @@
             ];
           }
 
-          ({ config, pkgs, lib, ... }: {
+          ({ config, pkgs, lib, ... }: 
+          let
+            secrets = import ./secrets.nix;
+          in {
             networking.hostName = "rpi5-homelab";
+            
+            # WiFi configuration
+            networking.wireless.enable = true;
+            networking.wireless.networks = {
+              "Attic" = {
+                psk = secrets.wifiPassword;
+              };
+            };
 
             # Disko configuration for automatic partitioning
             disko.devices = {
@@ -76,15 +87,16 @@
 
             # SSH keys for both users
             users.users.root.openssh.authorizedKeys.keys = [
-              "ssh-ed25519 AAAAC3... you@domain.com"
+              secrets.sshPublicKey
             ];
 
             # Create a regular user
             users.users.fredrik = {
               isNormalUser = true;
               extraGroups = [ "wheel" "networkmanager" ];
+              password = secrets.fredrikPassword;
               openssh.authorizedKeys.keys = [
-                "ssh-ed25519 AAAAC3... you@domain.com"
+                secrets.sshPublicKey
               ];
             };
 
@@ -94,6 +106,7 @@
             # Enhanced package set for homelab use
             environment.systemPackages = with pkgs; [
               vim
+              neovim
               git
               htop
               tree
