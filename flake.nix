@@ -140,6 +140,7 @@
                   tree
                   curl
                   wget
+				  lazygit
                 ];
                 
                 programs.git = {
