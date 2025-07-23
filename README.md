@@ -229,10 +229,10 @@ deploy the `flake.nix`.
 #### Maintenance
 
 Now that the homelab is up and running, changes to the flake can be made locally
-with
+after having executed `ssh fredrik@<ip>`:
 
 ```sh
-cd nix-config  # the cloned repo
+# cd into the cloned down nix-config repo
 
 # required secrets as environment variables for now
 export SECRET="value"
@@ -242,4 +242,11 @@ export SECRET="value"
 sudo -H -E nixos-rebuild switch --flake .#rpi5-homelab --impure
 ```
 
-Or from the development machine: TBD
+Or from the development machine:
+
+```sh
+env SSH_PUBLIC_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
+    WIFI_PASSWORD="your-wifi-password" \
+    FREDRIK_PASSWORD="your-password" \
+    nixos-rebuild switch --flake .#rpi5-homelab --target-host fredrik@<rpi5-ip> --use-remote-sudo --impure
+```
