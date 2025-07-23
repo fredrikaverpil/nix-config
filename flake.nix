@@ -37,7 +37,10 @@
 
           ({ config, pkgs, lib, ... }: 
           let
-            secrets = import ./secrets.nix;
+		    # expects /etc/nixos/secrets.nix or ./secrets.nix to exist
+            secrets = if builtins.pathExists ./secrets.nix 
+                     then import ./secrets.nix
+                     else import /etc/nixos/secrets.nix;
           in {
             networking.hostName = "rpi5-homelab";
             
