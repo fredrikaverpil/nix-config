@@ -35,17 +35,14 @@
             ];
           }
 
-          ({ config, pkgs, lib, ... }: 
-          let
-            secrets = import /etc/nixos/secrets.nix;
-          in {
+          ({ config, pkgs, lib, ... }: {
             networking.hostName = "rpi5-homelab";
             
             # WiFi configuration
             networking.wireless.enable = true;
             networking.wireless.networks = {
               "Attic" = {
-                psk = secrets.wifiPassword;
+                psk = builtins.getEnv "WIFI_PASSWORD";
               };
             };
 
@@ -87,16 +84,16 @@
 
             # SSH keys for both users
             users.users.root.openssh.authorizedKeys.keys = [
-              secrets.sshPublicKey
+              (builtins.getEnv "SSH_PUBLIC_KEY")
             ];
 
             # Create a regular user
             users.users.fredrik = {
               isNormalUser = true;
               extraGroups = [ "wheel" "networkmanager" ];
-              password = secrets.fredrikPassword;
+              password = builtins.getEnv "FREDRIK_PASSWORD";
               openssh.authorizedKeys.keys = [
-                secrets.sshPublicKey
+                (builtins.getEnv "SSH_PUBLIC_KEY")
               ];
             };
 
