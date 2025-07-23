@@ -85,7 +85,7 @@
 
             # Enable SSH
             services.openssh.enable = true;
-            services.openssh.settings.PermitRootLogin = "yes";
+            services.openssh.settings.PermitRootLogin = "no";
 
             # Enable Docker
             virtualisation.docker.enable = true;
