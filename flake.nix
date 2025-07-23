@@ -37,7 +37,7 @@
 
           ({ config, pkgs, lib, ... }: 
           let
-            secrets = import /etc/nixos/secrets.nix;;
+            secrets = import /etc/nixos/secrets.nix;
           in {
             networking.hostName = "rpi5-homelab";
             
