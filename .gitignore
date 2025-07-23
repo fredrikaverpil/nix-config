@@ -1,0 +1,18 @@
+# Hardware configurations (machine-specific)
+hardware-configuration.nix
+
+# Build results
+result
+result-*
+
+# Nix build outputs
+.direnv/
+
+# Secrets
+secrets/
+*.age
+*.key
+
+# OS generated files
+.DS_Store
+Thumbs.db

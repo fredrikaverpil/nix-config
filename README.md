@@ -1,6 +1,6 @@
 # nix-config
 
-## Outline
+## Folder structure proposal
 
 As proposed by Gemini. Let's see how it turns out, as it's still just ideas and
 early days.
@@ -41,7 +41,7 @@ my-nix-configs/
 
 ## rpi5-homelab
 
-### Installation
+### First-time installation
 
 #### Prepare bootloader
 
@@ -53,10 +53,16 @@ my-nix-configs/
 - Verify NVMe detection: `lsblk` should show `/dev/nvme0n1`.
 - Update Bootloader (EEPROM) - Crucial for NVMe Boot:
   `sudo rpi-eeprom-config --edit`
-  - Change `BOOT_ORDER` to `0xf416`, sets order NVMe/USB/SDCard.
+  - Change `BOOT_ORDER` to `0xf461` so either USB or SD Card takes precedence.
   - Add `PCIE_PROBE=1`.
   - Save and exit.
 - Reboot.
+
+The boot order can be translated like this:
+
+- 4 = USB
+- 6 = SD card
+- 1 = NVMe
 
 #### Install NixOS onto NVMe SSD
 
@@ -159,3 +165,37 @@ build times.
 3. Set root password and enable SSH: `passwd` then `systemctl enable --now sshd`
    (and find IP with ip a). SSH in from your main computer for convenience:
    `ssh nixos@<ip-address>` (or `root@...`).
+
+#### Deploy with nixos-anywhere
+
+Once you have the installer running and can SSH to it, you can deploy your
+actual NixOS configuration using nixos-anywhere:
+
+1. **Install nixos-anywhere** on your development machine:
+
+   ```sh
+   nix profile install nixpkgs#nixos-anywhere
+   ```
+
+2. **Create your system configuration** in `flake.nix`. This repo includes a
+   basic RPi5 configuration named `rpi5-homelab`.
+
+3. **Deploy to the Pi**:
+
+   ```sh
+   nixos-anywhere --flake .#rpi5-homelab root@nixos-installer.local
+   ```
+
+   This will:
+   - Use disko to partition and format the storage
+   - Build and deploy your NixOS configuration
+   - Reboot into your new system
+
+4. **SSH to your new system**:
+
+   ```sh
+   ssh fredrik@rpi5-homelab.local
+   ```
+
+Note: If building on macOS, you may need to configure remote builders or use the
+binary cache to avoid cross-compilation issues.
