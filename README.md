@@ -143,7 +143,7 @@ build times.
 
 #### Initial Boot into NixOS Installer on NVMe SSD
 
-> [!ATTENTION] This part is outdated and not used!
+> [!TODO] This part is outdated and not used. Let's move it / remove it.
 
 1. Boot Pi 5 from NVMe: Power down your Pi, remove the Raspberry Pi OS SD card,
    and power on. It should boot into the NixOS installer.
@@ -225,3 +225,21 @@ deploy the `flake.nix`.
    ```sh
    ssh fredrik@<ip-to-rpi5-homelab>
    ```
+
+#### Maintenance
+
+Now that the homelab is up and running, changes to the flake can be made locally
+with
+
+```sh
+cd nix-config  # the cloned repo
+
+# required secrets as environment variables for now
+export SECRET="value"
+# ...
+
+# Switch
+sudo -H -E nixos-rebuild switch --flake .#rpi5-homelab --impure
+```
+
+Or from the development machine: TBD
