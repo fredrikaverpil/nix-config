@@ -1,0 +1,132 @@
+# nix-config
+
+## Outline
+
+As proposed by Gemini. Let's see how it turns out, as it's still just ideas and
+early days.
+
+```text
+my-nix-configs/
+├── flake.nix                  # Defines all inputs and outputs (systems, users, packages)
+├── flake.lock                 # Pins all flake inputs (auto-generated, ALWAYS COMMIT)
+├── README.md                  # Explanation of your config, setup instructions
+├── .gitignore                 # Standard Nix/Git ignores
+├── hosts/                     # Directory for machine-specific system configurations
+│   ├── rpi5-homelab/          # Configuration for your Raspberry Pi 5
+│   │   ├── default.nix        # Main system definition for RPi5
+│   │   ├── hardware-configuration.nix # Hardware-specific (UUIDs, partitions) for RPi5
+│   │   └── secrets.yaml       # Encrypted secrets specific to RPi5 (e.g., Netbird keys)
+│   └── macbook-pro/           # Configuration for your MacBook Pro (when you adopt Nix-Darwin)
+│       └── default.nix        # Main system definition for MacBook Pro
+│       └── secrets.yaml       # Encrypted secrets specific to MacBook
+├── home-manager/              # Directory for Home Manager user configurations
+│   ├── default.nix            # Central file to import other Home Manager modules
+│   ├── common.nix             # Shared user-level configs (e.g., Neovim, Git, Zsh)
+│   ├── rpi5-user.nix          # Specific user configs for the RPi5 (e.g., Docker client setup)
+│   ├── mac-user.nix           # Specific user configs for the Mac
+├── modules/                   # Optional: Custom NixOS/Nix-Darwin modules (system-level)
+│   ├── services/
+│   │   └── netbird.nix        # Custom module for Netbird service setup
+│   ├── networking.nix
+│   └── common-system.nix      # Common system-wide settings
+├── packages/                  # Optional: Custom package definitions (non-system specific)
+│   └── my-custom-app/
+│       └── default.nix
+├── lib/                       # Optional: Custom Nix functions
+│   └── default.nix
+├── secrets/                   # Optional: Global encrypted secrets (if applicable)
+│   └── global-secrets.yaml
+└── .sops.yaml                # SOPS configuration for secret encryption/decryption
+```
+
+## rpi5-homelab
+
+### Installation
+
+#### Prepare bootloader
+
+- Ensure NVMe SSD is connected.
+- Boot Raspberry Pi OS from SD card.
+- Update and upgrade: `sudo apt update && sudo apt full-upgrade -y`
+- Enable PCIe: Edit `/boot/firmware/config.txt` and add `dtparam=pciex1`.
+  Reboot.
+- Verify NVMe detection: `lsblk` should show `/dev/nvme0n1`.
+- Update Bootloader (EEPROM) - Crucial for NVMe Boot:
+  `sudo rpi-eeprom-config --edit`
+  - Change `BOOT_ORDER` to `0xf416`, sets order NVMe/USB/SDCard.
+  - Add `PCIE_PROBE=1`.
+  - Save and exit.
+- Reboot.
+
+#### Install NixOS onto NVMe SSD
+
+This step will likely be done on your main computer (PC/Mac/Linux) for faster
+build times.
+
+1. Install Nix (if you haven't already) and enable flakes/nix-command:
+
+   ```sh
+   sh <(curl -L https://nixos.org/nix/install) --daemon
+   ```
+
+   Enable flakes: Edit `/etc/nix/nix.conf` and add
+   `experimental-features = nix-command flakes`. Restart `nix-daemon` or reboot.
+
+2. Clone the [nvmd/nixos-raspberrypi](https://github.com/nvmd/nixos-raspberrypi)
+   flake and build the installer image:
+
+   ```sh
+   git clone https://github.com/nvmd/nixos-raspberrypi.git
+   cd nixos-raspberrypi
+   ```
+
+   Consult the
+   [nvmd/nixos-raspberrypi](https://github.com/nvmd/nixos-raspberrypi)
+   repository's README for the exact steps. The below outlines the steps as of
+   writing this.
+
+   Replace the `# YOUR SSH PUB KEY HERE` placeholder in the `flake.nix` file,
+   like this, so to gain SSH access after installation:
+
+   ```nix
+   {
+        users.users.nixos.openssh.authorizedKeys.keys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPqX6g2... youremail@example.com"
+        ];
+        users.users.root.openssh.authorizedKeys.keys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPqX6g2... youremail@example.com"
+        ];
+   }
+   ```
+
+   Build the image for the Raspberry Pi 5:
+
+   ```sh
+   nix build .#installerImages.rpi5
+   ```
+
+   This will output a path to the generated image, something like
+   `/nix/store/...-nixos-sd-image-.../sd-image/nixos-installer-rpi5-kernelboot.img.zst`.
+
+3. Decompress the image:
+
+   ```sh
+   zstd -d <path_to_generated_image.img.zst> -o nixos-installer-rpi5.img
+   ```
+
+4. Flash the image to the NVMe SSD.
+
+   Use `dd` (or Raspberry Pi Imager if it supports custom images) to flash:
+
+   ```sh
+   sudo dd bs=4M if=nixos-installer-rpi5.img of=/dev/nvme0n1 conv=fsync status=progress
+   ```
+
+#### Initial Boot into NixOS Installer on NVMe SSD
+
+1. Boot Pi 5 from NVMe: Power down your Pi, remove the Raspberry Pi OS SD card,
+   and power on. It should boot into the NixOS installer.
+2. Connect to network: Configure Wi-Fi or verify Ethernet.
+3. Set root password and enable SSH: `passwd` then `systemctl enable --now sshd`
+   (and find IP with ip a). SSH in from your main computer for convenience:
+   `ssh nixos@<ip-address>` (or `root@...`).
