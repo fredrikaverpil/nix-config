@@ -17,3 +17,7 @@ secrets.nix
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# various
+switch.sh
+setenv.sh
