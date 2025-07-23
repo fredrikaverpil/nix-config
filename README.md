@@ -139,7 +139,23 @@ build times.
 
 1. Boot Pi 5 from NVMe: Power down your Pi, remove the Raspberry Pi OS SD card,
    and power on. It should boot into the NixOS installer.
-2. Connect to network: Configure Wi-Fi or verify Ethernet.
+2. Connect to network. If connecting to Wifi:
+
+   ```sh
+   device list # get devices, such as 'wlan0'
+   station wlan0 scan # scan for networks
+   station wlan0 get-networks # show available networks
+   station wlan0 connect "YOUR_SSID" # connect (will prompt for password)
+   quit # exit iwctl
+
+   ip a # verify connection and get IP
+   systemctl is-enabled sshd  # check if sshd is enabled
+   systemctl is-active sshd  # check if sshd is running
+   ```
+
+   Note you can run without interactive mode, like `iwctl station wlan0 scan`
+   etc.
+
 3. Set root password and enable SSH: `passwd` then `systemctl enable --now sshd`
    (and find IP with ip a). SSH in from your main computer for convenience:
    `ssh nixos@<ip-address>` (or `root@...`).
