@@ -46,9 +46,9 @@
             # WiFi configuration
             networking.wireless.enable = true;
             networking.wireless.networks = {
-              "Attic" = {
-                psk = builtins.getEnv "WIFI_PASSWORD";
-              };
+              # "my-wifi-ssid" = {
+              #   psk = "secret-password";
+              # };
             };
 
             # Disko configuration for automatic partitioning
@@ -92,16 +92,14 @@
 
             # SSH keys for both users
             users.users.root.openssh.authorizedKeys.keys = [
-              (builtins.getEnv "SSH_PUBLIC_KEY")
             ];
 
             # Create a regular user
             users.users.fredrik = {
               isNormalUser = true;
               extraGroups = [ "wheel" "networkmanager" "docker" ];
-              password = builtins.getEnv "FREDRIK_PASSWORD";
+              password = "changeme";
               openssh.authorizedKeys.keys = [
-                (builtins.getEnv "SSH_PUBLIC_KEY")
               ];
             };
 
