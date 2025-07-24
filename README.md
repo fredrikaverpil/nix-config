@@ -100,7 +100,7 @@ very first installation which includes NVMe SSD partitioning.
 Install nixos-anywhere on the machine:
 
 ```sh
-nix profile install nixpkgs#nixos-anywhere
+nix profile add nixpkgs#nixos-anywhere
 ```
 
 Now we need to enable `root` password on the rpi5. Make sure the rpi5 is running
