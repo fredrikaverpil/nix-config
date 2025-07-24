@@ -140,7 +140,7 @@ nixos-anywhere --flake .#rpi5-homelab --phases install root@raspberrypi.local
 ```
 
 Finally, remove the SD card from the rpi5 and reboot. It should now be possible
-to SSH into the new system:
+to SSH into the new system and change the password with `passwd`:
 
 ```sh
 ssh fredrik@<ip-to-rpi5-homelab>
