@@ -113,6 +113,7 @@
               htop
               rsync
               docker-compose
+              iwd  # provides iwctl
               # Pi-specific tools available through nixos-raspberrypi
             ] ++ (with pkgs.rpi or {}; [
               # Pi-optimized packages when available
