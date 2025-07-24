@@ -41,9 +41,12 @@ my-nix-configs/
 
 ## rpi5-homelab
 
-### First-time installation
+The setup has taken inspiration from:
 
-#### Prepare bootloader
+- [Raspberry Pi 5 on NixOS wiki](https://wiki.nixos.org/wiki/NixOS_on_ARM/Raspberry_Pi_5)
+- [nvmd/nixos-raspberrypi](https://github.com/nvmd/nixos-raspberrypi)
+
+### Prepare bootloader on Raspberry Pi 5
 
 - Ensure NVMe SSD is connected.
 - Boot Raspberry Pi OS from SD card.
@@ -64,189 +67,113 @@ The boot order can be translated like this:
 - 6 = SD card
 - 1 = NVMe
 
-#### Install NixOS onto NVMe SSD
+### Write NixOS installer onto NVMe SSD
 
-This step will likely be done on your main computer (PC/Mac/Linux) for faster
-build times.
+On the rpi5, install Nix and enable flakes/nix-command:
 
-1. Install Nix (if you haven't already) and enable flakes/nix-command:
+```sh
+sh <(curl -L https://nixos.org/nix/install) --daemon
+```
 
-   ```sh
-   sh <(curl -L https://nixos.org/nix/install) --daemon
-   ```
+Edit `/etc/nix/nix.conf` and add the following:
 
-   Enable flakes: Edit `/etc/nix/nix.conf` and add the following:
+- `experimental-features`: add flakes support
+- `trusted-users`, `extra-substituters` and `extra-trusted-public-keys`: needed
+  for `nvmd/nixos-raspberrypi` build cache
 
-   ```ini
-   experimental-features = nix-command flakes
+```conf
+experimental-features = nix-command flakes
 
-   extra-substituters = https://nixos-raspberrypi.cachix.org
-   extra-trusted-public-keys = nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
-   ```
+trusted-users = root nixos fredrik
+extra-substituters = https://nixos-raspberrypi.cachix.org
+extra-trusted-public-keys = nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
+```
 
-   The latter two lines will prevent very long build times, and will instead
-   download builds from a binary cache. Consult the `nvmd/nixos-raspberrypi`
-   repo for potential updates on the hash.
+Restart `nix-daemon` or reboot.
 
-   Restart `nix-daemon` or reboot.
+### Deploy with nixos-anywhere
 
-2. Clone the [nvmd/nixos-raspberrypi](https://github.com/nvmd/nixos-raspberrypi)
-   flake and build the installer image:
+From another develpment machine (e.g. macOS), `cd` into this repo. We will now
+deploy the `flake.nix` using `nixos-anywhere`. This is a one-time step for the
+very first installation which includes NVMe SSD partitioning.
 
-   ```sh
-   git clone https://github.com/nvmd/nixos-raspberrypi.git
-   cd nixos-raspberrypi
-   ```
+Install nixos-anywhere on the machine:
 
-   Consult the
-   [nvmd/nixos-raspberrypi](https://github.com/nvmd/nixos-raspberrypi)
-   repository's README for the exact steps. The below outlines the steps as of
-   writing this.
+```sh
+nix profile install nixpkgs#nixos-anywhere
+```
 
-   Replace the `# YOUR SSH PUB KEY HERE` placeholder in the `flake.nix` file,
-   like this, so to gain SSH access after installation:
+Now we need to enable `root` password on the rpi5. Make sure the rpi5 is running
+the Raspberry OS from SD Card.
 
-   ```nix
-   {
-        users.users.nixos.openssh.authorizedKeys.keys = [
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPqX6g2... youremail@example.com"
-        ];
-        users.users.root.openssh.authorizedKeys.keys = [
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPqX6g2... youremail@example.com"
-        ];
-   }
-   ```
+```sh
+# SSH into rpi5
+ssh root@raspberrypi.local
 
-   Build the image for the Raspberry Pi 5:
+# Set root password
+sudo passwd root
+sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+sudo systemctl restart ssh
 
-   ```sh
-   nix build .#installerImages.rpi5
-   ```
+# Add Nix to system PATH permanently
+echo 'export PATH="/root/.nix-profile/bin:$PATH"' >> /etc/bash.bashrc
+echo 'source /root/.nix-profile/etc/profile.d/nix.sh' >> /etc/bash.bashrc
 
-   This will generate a symlink `result`, pointing to the generated image,
-   something like
-   `/nix/store/...-nixos-sd-image-.../sd-image/nixos-installer-rpi5-kernelboot.img.zst`.
+# Also add to /etc/environment for system-wide access
+echo 'PATH="/root/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' >> /etc/environment
 
-3. Decompress the image:
+# Install nixos-install
+nix-env -iA nixpkgs.nixos-install-tools
 
-   ```sh
-   zstd -d result/sd-image/nixos-installer-rpi5-kernelboot.img.zst -o nixos-installer-rpi5.img
-   ```
+# Exit shell
+exit
+```
 
-4. Flash the image to the NVMe SSD.
+Now, let's eploy to the rpi5. From the development machine, run:
 
-   Use `dd` (or Raspberry Pi Imager if it supports custom images) to flash:
+```sh
+# Use disko to partition and format the storage
+nixos-anywhere --flake .#rpi5-homelab --phases disko root@raspberrypi.local
 
-   ```sh
-   sudo dd bs=4M if=nixos-installer-rpi5.img of=/dev/nvme0n1 conv=fsync status=progress
-   ```
+# Build and deploy the NixOS configuration
+nixos-anywhere --flake .#rpi5-homelab --phases install root@raspberrypi.local
+```
 
-#### Initial Boot into NixOS Installer on NVMe SSD
+Finally, remove the SD card from the rpi5 and reboot. It should now be possible
+to SSH into the new system:
 
-> [!TODO] This part is outdated and not used. Let's move it / remove it.
+```sh
+ssh fredrik@<ip-to-rpi5-homelab>
+```
 
-1. Boot Pi 5 from NVMe: Power down your Pi, remove the Raspberry Pi OS SD card,
-   and power on. It should boot into the NixOS installer.
-2. Connect to network. If connecting to Wifi:
+If you did not set the Wi-Fi password, log into the homelab locally and...
 
-   ```sh
-   iwctl  # start iwctl in interactive mode
-   device list # get devices, such as 'wlan0'
-   station wlan0 scan # scan for networks
-   station wlan0 get-networks # show available networks
-   station wlan0 connect "YOUR_SSID" # connect (will prompt for password)
-   quit # exit iwctl
+```sh
+iwctl  # start iwctl in interactive mode
+device list # get devices, such as 'wlan0'
+station wlan0 scan # scan for networks
+station wlan0 get-networks # show available networks
+station wlan0 connect "YOUR_SSID" # connect (will prompt for password)
+quit # exit iwctl
 
-   ip a # verify connection and get IP
-   systemctl is-enabled sshd  # check if sshd is enabled
-   systemctl is-active sshd  # check if sshd is running
-   ```
+ip a # verify connection and get IP
+systemctl is-enabled sshd  # check if sshd is enabled
+systemctl is-active sshd  # check if sshd is running
+```
 
-   Note you can run without interactive mode, like `iwctl station wlan0 scan`
-   etc.
-
-3. Set root password and enable SSH: `passwd` then `systemctl enable --now sshd`
-   (and find IP with ip a). SSH in from your main computer for convenience:
-   `ssh nixos@<ip-address>` (or `root@...`).
-
-#### Deploy with nixos-anywhere
-
-From the development machine (e.g. macOS), `cd` into this repo. We will now
-deploy the `flake.nix`.
-
-1. **Install nixos-anywhere** on your development machine:
-
-   ```sh
-   nix profile install nixpkgs#nixos-anywhere
-   ```
-
-2. **Allow root password on rpi5**:
-
-   Make sure the rpi5 is running the Raspberry OS from SD Card.
-
-   ```sh
-   # SSH into rpi5
-   ssh root@raspberrypi.local
-
-   # Set root password
-   sudo passwd root
-   sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-   sudo systemctl restart ssh
-
-    # Add Nix to system PATH permanently
-    echo 'export PATH="/root/.nix-profile/bin:$PATH"' >> /etc/bash.bashrc
-    echo 'source /root/.nix-profile/etc/profile.d/nix.sh' >> /etc/bash.bashrc
-
-    # Also add to /etc/environment for system-wide access
-    echo 'PATH="/root/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' >> /etc/environment
-
-    # Install nixos-install
-    nix-env -iA nixpkgs.nixos-install-tools
-
-    # Exit shell
-    exit
-   ```
-
-3. **Deploy to the Pi**:
-
-   From the development machine:
-
-   ```sh
-   nixos-anywhere --flake .#rpi5-homelab root@raspberrypi.local
-   ```
-
-   This will:
-   - Use disko to partition and format the storage
-   - Build and deploy your NixOS configuration
-   - Reboot into your new system
-
-4. **SSH to your new system**:
-
-   ```sh
-   ssh fredrik@<ip-to-rpi5-homelab>
-   ```
-
-#### Maintenance
+### Maintenance
 
 Now that the homelab is up and running, changes to the flake can be made locally
-after having executed `ssh fredrik@<ip>`:
+after having executed `ssh fredrik@<ip>` (you can get the ip with `ip a`):
 
 ```sh
 # cd into the cloned down nix-config repo
 
-# required secrets as environment variables for now
-export SECRET="value"
-# ...
-
-# Switch
 sudo -H -E nixos-rebuild switch --flake .#rpi5-homelab --impure
 ```
 
 Or from the development machine:
 
 ```sh
-env SSH_PUBLIC_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
-    WIFI_PASSWORD="your-wifi-password" \
-    FREDRIK_PASSWORD="your-password" \
-    nixos-rebuild switch --flake .#rpi5-homelab --target-host fredrik@<rpi5-ip> --use-remote-sudo --impure
+nixos-rebuild switch --flake .#rpi5-homelab --target-host fredrik@<rpi5-ip> --use-remote-sudo --impure
 ```
