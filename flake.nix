@@ -26,7 +26,7 @@
   outputs = { self, nixpkgs, nixos-raspberrypi, disko, home-manager, ... }@inputs: {
     nixosConfigurations = {
       # Your Raspberry Pi 5 homelab system configuration
-      rpi5-homelab = nixos-raspberrypi.lib.nixosSystemFull {
+      rpi5-homelab = nixos-raspberrypi.lib.nixosSystem {
         specialArgs = inputs // { nixos-raspberrypi = nixos-raspberrypi; };
         modules = [
           disko.nixosModules.disko
@@ -35,7 +35,6 @@
             # Hardware specific configuration
             imports = with nixos-raspberrypi.nixosModules; [
               raspberry-pi-5.base
-              raspberry-pi-5.display-vc4
               raspberry-pi-5.bluetooth
             ];
           }
