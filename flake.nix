@@ -42,21 +42,40 @@
 
           ({ config, pkgs, lib, ... }: {
             networking.hostName = "rpi5-homelab";
-            
-            # WiFi configuration
-            networking.wireless.enable = true;
-            networking.wireless.networks = {
-              # "my-wifi-ssid" = {
-              #   psk = "secret-password";
-              # };
-            };
+
+            # WiFi configuration using NetworkManager (conflicts resolved)
+            networking.networkmanager.enable = true;
+            networking.networkmanager.wifi.backend = "iwd";
+            # networking.networkmanager.ensureProfiles = {
+            #   environmentFiles = [ "/etc/NetworkManager/profiles.env" ];
+            #   profiles = {
+            #     "my-wifi" = {
+            #       connection = {
+            #         id = "my-wifi";
+            #         type = "wifi";
+            #         autoconnect = true;
+            #       };
+            #       wifi = {
+            #         ssid = "$WIFI_SSID";
+            #         mode = "infrastructure";
+            #       };
+            #       wifi-security = {
+            #         key-mgmt = "wpa-psk";
+            #         psk = "$WIFI_PASSWORD";
+            #       };
+            #       ipv4 = {
+            #         method = "auto";
+            #       };
+            #     };
+            #   };
+            # };
 
             # Disko configuration for automatic partitioning
             disko.devices = {
               disk = {
                 main = {
                   type = "disk";
-                  device = "/dev/nvme0n1";  # NVMe SSD
+                  device = "/dev/nvme0n1"; # NVMe SSD
                   content = {
                     type = "gpt";
                     partitions = {
@@ -90,17 +109,14 @@
             # Enable Docker
             virtualisation.docker.enable = true;
 
-            # SSH keys for both users
-            users.users.root.openssh.authorizedKeys.keys = [
-            ];
-
             # Create a regular user
             users.users.fredrik = {
               isNormalUser = true;
               extraGroups = [ "wheel" "networkmanager" "docker" ];
               password = "changeme";
-              openssh.authorizedKeys.keys = [
-              ];
+              # openssh.authorizedKeys.keys = [
+              #   # Add your SSH public keys here
+              # ];
             };
 
             # Enable sudo for wheel group
@@ -113,20 +129,22 @@
               htop
               rsync
               docker-compose
-              iwd  # provides iwctl
+              iwd # provides iwctl
               # Pi-specific tools available through nixos-raspberrypi
-            ] ++ (with pkgs.rpi or {}; [
+            ] ++ (with pkgs.rpi or { }; [
               # Pi-optimized packages when available
             ]);
 
             # System tags for identification (following nixos-raspberrypi pattern)
-            system.nixos.tags = let
-              cfg = config.boot.loader.raspberryPi;
-            in [
-              "raspberry-pi-${cfg.variant}"
-              cfg.bootloader
-              config.boot.kernelPackages.kernel.version
-            ];
+            system.nixos.tags =
+              let
+                cfg = config.boot.loader.raspberryPi;
+              in
+              [
+                "raspberry-pi-${cfg.variant}"
+                cfg.bootloader
+                config.boot.kernelPackages.kernel.version
+              ];
 
             # Home Manager configuration
             home-manager = {
@@ -139,15 +157,15 @@
                   tree
                   curl
                   wget
-				  lazygit
+                  lazygit
                 ];
-                
+
                 programs.git = {
                   enable = true;
-				  userName = "Fredrik Averpil";
-				  userEmail = "fredrik.averpil@gmail.com";
+                  userName = "Fredrik Averpil";
+                  userEmail = "fredrik.averpil@gmail.com";
                 };
-                
+
                 home.stateVersion = "25.05";
               };
             };
